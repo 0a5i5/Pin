@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>بنتراست داونلودر</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Segoe UI', Tahoma, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+        .container {
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            padding: 40px;
+            max-width: 500px;
+            width: 100%;
+            text-align: center;
+        }
+        h1 { color: #333; margin-bottom: 20px; font-size: 1.8em; }
+        input[type="url"] {
+            width: 100%;
+            padding: 15px;
+            border: 2px solid #ddd;
+            border-radius: 10px;
+            font-size: 16px;
+            margin-bottom: 20px;
+            transition: border 0.3s;
+        }
+        input:focus { border-color: #667eea; outline: none; }
+        button {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            border-radius: 10px;
+            font-size: 16px;
+            cursor: pointer;
+            margin: 10px;
+            transition: transform 0.2s;
+        }
+        button:hover { transform: scale(1.05); }
+        button:disabled { opacity: 0.6; cursor: not-allowed; }
+        #preview {
+            margin: 30px 0;
+            min-height: 200px;
+            border-radius: 15px;
+            overflow: hidden;
+            background: #f8f9fa;
+            display: none;
+        }
+        #preview img, #preview video {
+            width: 100%;
+            height: 300px;
+            object-fit: cover;
+        }
+        #status { margin: 20px 0; font-weight: bold; }
+        .success { color: #28a745; }
+        .error { color: #dc3545; }
+        @media (max-width: 600px) {
+            .container { padding: 20px; }
+            h1 { font-size: 1.5em; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>📥 تحميل من Pinterest</h1>
+        <input type="url" id="linkInput" placeholder="الصق رابط Pinterest هنا (مثال: https://pin.it/3rlbJMqpo)">
+        <br>
+        <button onclick="extractMedia()">🔍 استخراج الوسائط</button>
+        <div id="status"></div>
+        <div id="preview">
+            <img id="imagePreview" style="display: none;">
+            <video id="videoPreview" controls style="display: none;"></video>
+        </div>
+        <button id="downloadBtn" onclick="downloadMedia()" style="display: none;">💾 تحميل الآن</button>
+    </div>
+
+    <script>
+        let mediaData = null;
+
+        const PROXY = 'https://api.allorigins.win/raw?url=';
+        const statusEl = document.getElementById('status');
+        const previewEl = document.getElementById('preview');
+        const imageEl = document.getElementById('imagePreview');
+        const videoEl = document.getElementById('videoPreview');
+        const downloadBtn = document.getElementById('downloadBtn');
+
+        async function extractMedia() {
+            const link = document.getElementById('linkInput').value.trim();
+            if (!link) {
+                showStatus('أدخل رابط Pinterest صالح!', 'error');
+                return;
+            }
+
+            const extractBtn = event.target;
+            extractBtn.disabled = true;
+            extractBtn.textContent = 'جاري التحميل...';
+            showStatus('جاري استخراج الوسائط...', '');
+
+            try {
+                const response = await fetch(PROXY + encodeURIComponent(link));
+                if (!response.ok) throw new Error('فشل في جلب الصفحة');
+                const html = await response.text();
+
+                const parser = new DOMParser();
+                const doc = parser.parseFromString(html, 'text/html');
+
+                const ogImage = doc.querySelector('meta[property="og:image"]')?.getAttribute('content');
+                const ogVideo = doc.querySelector('meta[property="og:video"]')?.getAttribute('content');
+
+                if (ogVideo) {
+                    mediaData = { type: 'video', url: ogVideo };
+                } else if (ogImage) {
+                    // تحويل إلى أعلى جودة
+                    let highResUrl = ogImage
+                        .replace(/\/236x\//, '/originals/')
+                        .replace(/\/474x\//, '/originals/')
+                        .replace(/\/fm\/webp\//, '');
+                    mediaData = { type: 'image', url: highResUrl };
+                } else {
+                    throw new Error('لم يتم العثور على صورة أو فيديو!');
+                }
+
+                // عرض المعاينة
+                previewEl.style.display = 'block';
+                if (mediaData.type === 'image') {
+                    imageEl.src = mediaData.url;
+                    imageEl.style.display = 'block';
+                    videoEl.style.display = 'none';
+                } else {
+                    videoEl.src = mediaData.url;
+                    videoEl.style.display = 'block';
+                    imageEl.style.display = 'none';
+                }
+
+                downloadBtn.style.display = 'inline-block';
+                showStatus('✅ جاهز للتحميل بأعلى جودة!', 'success');
+
+            } catch (error) {
+                showStatus('خطأ: ' + error.message + ' جرب رابط آخر.', 'error');
+            } finally {
+                extractBtn.disabled = false;
+                extractBtn.textContent = '🔍 استخراج الوسائط';
+            }
+        }
+
+        function downloadMedia() {
+            if (!mediaData) return;
+            const a = document.createElement('a');
+            a.href = mediaData.url;
+            a.download = `pinterest_${mediaData.type === 'image' ? 'image.jpg' : 'video.mp4'}`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            showStatus('تم التحميل! 🎉', 'success');
+        }
+
+        function showStatus(message, type) {
+            statusEl.textContent = message;
+            statusEl.className = type;
+        }
+
+        // اختصار: اضغط Enter في الإدخال
+        document.getElementById('linkInput').addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') extractMedia();
+        });
+    </script>
+</body>
+</html>
