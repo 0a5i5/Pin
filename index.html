@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>بنتراست داونلودر</title>
+    <title>تحميل Pinterest - صور وفيديوهات</title>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
@@ -81,7 +81,8 @@
             <img id="imagePreview" style="display: none;">
             <video id="videoPreview" controls style="display: none;"></video>
         </div>
-        <button id="downloadBtn" onclick="downloadMedia()" style="display: none;">💾 تحميل الآن</button>
+        <button id="downloadBtn" onclick="downloadMedia()" style="display: none;">💾 تحميل مباشر</button>
+        <button id="openBtn" onclick="openInNewTab()" style="display: none;">🖥️ فتح في تبويب جديد</button>
     </div>
 
     <script>
@@ -93,6 +94,7 @@
         const imageEl = document.getElementById('imagePreview');
         const videoEl = document.getElementById('videoPreview');
         const downloadBtn = document.getElementById('downloadBtn');
+        const openBtn = document.getElementById('openBtn');
 
         async function extractMedia() {
             const link = document.getElementById('linkInput').value.trim();
@@ -143,7 +145,8 @@
                 }
 
                 downloadBtn.style.display = 'inline-block';
-                showStatus('✅ جاهز للتحميل بأعلى جودة!', 'success');
+                openBtn.style.display = 'inline-block';
+                showStatus('✅ جاهز! اختر تحميل مباشر أو فتح في تبويب جديد.', 'success');
 
             } catch (error) {
                 showStatus('خطأ: ' + error.message + ' جرب رابط آخر.', 'error');
@@ -161,7 +164,13 @@
             document.body.appendChild(a);
             a.click();
             document.body.removeChild(a);
-            showStatus('تم التحميل! 🎉', 'success');
+            showStatus('تم التحميل المباشر! 🎉', 'success');
+        }
+
+        function openInNewTab() {
+            if (!mediaData) return;
+            window.open(mediaData.url, '_blank');
+            showStatus('تم فتح الوسائط في تبويب جديد! يمكنك تحميلها من هناك.', 'success');
         }
 
         function showStatus(message, type) {
